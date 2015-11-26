@@ -59,7 +59,7 @@ def run_cmd(packet, cmd):
 		if(arguments is not None):
 			out, err = Popen([command, arguments], stdout=PIPE, stderr=PIPE).communicate()
 		else:
-			out, err = Popen(data, stdout=PIPE, stderr=PIPE).communicate()
+			out, err = Popen(cmd[0], stdout=PIPE, stderr=PIPE).communicate()
 	except OSError:
 		output = "Invalid Command / Command not found"
 	if(out):

