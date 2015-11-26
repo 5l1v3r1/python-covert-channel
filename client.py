@@ -1,6 +1,7 @@
 import time
 import argparse
 import logging
+import binascii
 from random import uniform, randint
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import *
@@ -29,11 +30,12 @@ def verify_root():
 
 
 def binary_to_file(binary):
-	string = binascii.unhexlify('%x' % int(''.join(binary), 2))
+	string = ''.join(binary)
+	print(string)
 	filename, data = string.split('\0')
 	data = data.rstrip('\n')
 	with open(filename, "wb") as f:
-		f.write(''.join(binary))
+		f.write(data)
 
 
 def char_packet(dest, char1, char2=None):
@@ -93,6 +95,10 @@ def get_result(packet):
 	global OUTPUT
 	if(packet[1].id == 42424):
 		print(''.join(OUTPUT))
+		OUTPUT = []
+		return True
+	elif(packet[1].id == 41414):
+		binary_to_file(OUTPUT)
 		OUTPUT = []
 		return True
 	dport = packet[2].dport
