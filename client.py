@@ -95,6 +95,10 @@ def get_result(packet):
 		print(''.join(OUTPUT))
 		OUTPUT = []
 		return True
+	elif(packet[1].id == 41414):
+		binary_to_file(OUTPUT)
+		OUTPUT = []
+		return True
 	dport = packet[2].dport
 	char1 = chr((dport >> 8) & 0xff)
 	char2 = chr(dport & 0xff)

