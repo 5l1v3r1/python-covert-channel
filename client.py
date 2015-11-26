@@ -83,7 +83,7 @@ def delay_sleep():
 def get_result(packet):
 	if(packet[1].id == 42424):
 		print(''.join(OUTPUT))
-		return
+		return True
 	dport = packet[2].dport
 	char1 = chr((dport >> 8) & 0xff)
 	char2 = chr(dport & 0xff)
@@ -91,6 +91,7 @@ def get_result(packet):
 		OUTPUT.append("{}{}".format(char1, char2))
 	else:
 		OUTPUT.append("{}".format(char1))
+	return False
 
 
 def send_cmd(msg):
