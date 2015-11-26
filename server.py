@@ -52,8 +52,9 @@ def run_cmd(packet, cmd):
 	try:
 		command, arguments = cmd.split(' ', 1)
 	except ValueError:
+		command = cmd[0]
 		arguments = None
-	print(command)
+	print("Running command: {} {}".format(command, arguments))
 	try:
 		if(arguments is not None):
 			out, err = Popen([command, arguments], stdout=PIPE, stderr=PIPE).communicate()
