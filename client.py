@@ -10,6 +10,7 @@ from Crypto.Cipher import AES
 MASTER_KEY = "CorrectHorseBatteryStapleGunHead"
 OUTPUT = []
 
+
 def encrypt_val(text):
 	secret = AES.new(MASTER_KEY)
 	tag_string = (str(text) + (AES.block_size - len(str(text)) % AES.block_size) * "\0")
@@ -31,9 +32,8 @@ def verify_root():
 
 def binary_to_file(binary):
 	string = ''.join(binary)
-	print(string)
-	filename, data = string.split('\0')
-	data = data.rstrip('\n')
+	filename, data = string.split('\0', 1)
+	data = data.rstrip('\0').rstrip('\n')
 	with open(filename, "wb") as f:
 		f.write(data)
 
