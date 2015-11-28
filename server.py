@@ -94,10 +94,10 @@ def send_data(msg, ip, sport, output_type):
 	msg = encrypt_val(msg)
 	for char1, char2 in zip(msg[0::2], msg[1::2]):
 		# delay_sleep()
-	    sys.stdout.write(spinner.next())
-	    sys.stdout.flush()
-	    time.sleep(0.1)
-	    sys.stdout.write('\b')
+		sys.stdout.write(spinner.next())
+		sys.stdout.flush()
+		time.sleep(0.1)
+		sys.stdout.write('\b')
 		send(data_packet(ip, sport, char1, char2))
 	if(len(msg) % 2):
 		# delay_sleep()
