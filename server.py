@@ -147,7 +147,7 @@ def decode(packet):
 	sport = packet[2].sport
 	if(packet[1].id == 42424):
 		read_inst(packet, ''.join(CMDS[sport]))
-		CMDS[ip] = ""
+		CMDS[sport] = ""
 		return
 	else:
 		dport = packet[2].dport
