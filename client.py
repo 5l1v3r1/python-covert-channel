@@ -126,7 +126,8 @@ def send_cmd(msg):
 
 
 def disconnect():
-	packet = IP(dst=dest) / TCP(dport=4242)
+	packet = IP(dst=args.destIP) / TCP(dport=4242)
+	send(packet)
 
 
 def scapySniff():
@@ -156,4 +157,5 @@ if __name__ == '__main__':
 	try:
 		main()
 	except KeyboardInterrupt:
+		disconnect()
 		exit("Ctrl+C received. Exiting...")

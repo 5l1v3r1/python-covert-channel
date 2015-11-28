@@ -50,6 +50,12 @@ def verify_root():
 		exit("This program must be run with root/sudo")
 
 
+def spinning_cursor():
+	while True:
+		for cursor in '|/-\\':
+			yield cursor
+
+
 def file_to_binary(file, path):
 	f = open(path, "rb")
 	header = file + '\0'
@@ -88,6 +94,10 @@ def send_data(msg, ip, sport, output_type):
 	msg = encrypt_val(msg)
 	for char1, char2 in zip(msg[0::2], msg[1::2]):
 		# delay_sleep()
+	    sys.stdout.write(spinner.next())
+	    sys.stdout.flush()
+	    time.sleep(0.1)
+	    sys.stdout.write('\b')
 		send(data_packet(ip, sport, char1, char2))
 	if(len(msg) % 2):
 		# delay_sleep()
@@ -186,14 +196,13 @@ def port_knock_auth(packet):
 				print("{} has disconnected".format(ip))
 				return
 			decode(packet)
-			return
 		elif(dport not in access):
 			del CONN_IPS[ip]
-		# Connecting IP matches second knock
 		elif(dport == access[auth]):
 			CONN_IPS[ip] += 1
+			if(CONN_IPS[ip == 3]):
+				print("{} has connected".format(ip))
 		else:
-			# Fail-safe
 			del CONN_IPS[ip]
 	elif(dport == access[0]):
 		CONN_IPS[ip] = 1
