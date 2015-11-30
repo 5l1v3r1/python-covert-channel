@@ -104,9 +104,12 @@ def run_cmd(packet, cmd):
     output = []
     out = err = None
     try:
-        command, arguments = cmd.split(' ', 1)
-        command = command.rstrip('\0')
-        arguments = arguments.rstrip('\0')
+        # command, arguments = cmd.split(' ', 1)
+        # command = command.rstrip('\0')
+        # arguments = arguments.rstrip('\0')
+        # arguments = arguments.replace(" ", ", ")
+        arguments = ""
+        command = cmd.split()
     except ValueError:
         command = cmd.rstrip('\0')
         arguments = ""
