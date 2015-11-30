@@ -57,18 +57,27 @@ def char_packet(dest, sport, char1, char2=None):
 		destport = ord(char1) << 8
 	else:
 		destport = (ord(char1) << 8) + ord(char2)
-	return IP(dst=dest) / TCP(sport=sport, dport=destport)
+    if(args.proto.lower() == "tcp"):
+		return IP(dst=dest) / TCP(sport=sport, dport=destport)
+	else:
+		return IP(dst=dest) / UDP(sport=sport, dport=destport)
 
 
 def knock(destIP, ports):
 	for port in ports:
-		packet = IP(dst=destIP) / TCP(dport=port)
+	    if(args.proto.lower() == "tcp"):
+			packet = IP(dst=destIP) / TCP(dport=port)
+		else:
+			packet = IP(dst=destIP) / UDP(dport=port)
 		send(packet, verbose=0)
 
 
 def send_end_msg(dest, sport):
 	randPort = randint(1500, 65535)
-	packet = IP(dst=dest, id=42424) / TCP(dport=randPort, sport=sport)
+    if(args.proto.lower() == "tcp"):
+		packet = IP(dst=dest, id=42424) / TCP(dport=randPort, sport=sport)
+	else:
+		packet = IP(dst=dest, id=42424) / UDP(dport=randPort, sport=sport)
 	send(packet, verbose=0)
 
 
@@ -126,7 +135,10 @@ def send_cmd(msg):
 
 
 def disconnect():
-	packet = IP(dst=args.destIP) / TCP(dport=4242)
+    if(args.proto.lower() == "tcp"):
+		packet = IP(dst=args.destIP) / TCP(dport=4242)
+	else:
+		packet = IP(dst=args.destIP) / UDP(dport=4242)
 	send(packet)
 
 
@@ -153,6 +165,12 @@ if __name__ == '__main__':
 	parser.add_argument('destIP', help="Destination address")
 	parser.add_argument('-s', '--sport', help="Source port to send from, defaults to 80")
 	parser.add_argument('-d', '--delay', help="Delay between each send in seconds. Range allowed with a dash")
+    parser.add_argument("-p", "--proto", help="Protocol to use, can be TCP or UDP")
+    if(args.proto is not None):
+        if(args.proto.lower() not in ["tcp", "udp"]):
+            exit("Invalid protocol specified")
+    else:
+        args.proto = "TCP"
 	args = parser.parse_args()
 	try:
 		main()
